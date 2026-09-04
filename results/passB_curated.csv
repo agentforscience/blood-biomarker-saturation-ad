@@ -1,0 +1,27 @@
+study,cohort,n,population,endpoint,platform,panel,k,auc,src,note
+Trelle2026_SAMS,SAMS,193,CU,amyloid_status_CSF,NULISAseq+Lumipulse,"covariates(age,sex,APOE4)",0,0.748,Trelle 2026 Mol Neurodegener 21:31,
+Trelle2026_SAMS,SAMS,193,CU,amyloid_status_CSF,Lumipulse,NfL,1,0.55,Trelle 2026,
+Trelle2026_SAMS,SAMS,193,CU,amyloid_status_CSF,Lumipulse,GFAP,1,0.7,Trelle 2026,
+Trelle2026_SAMS,SAMS,193,CU,amyloid_status_CSF,NULISAseq,pTau217,1,0.879,Trelle 2026,
+Trelle2026_SAMS,SAMS,193,CU,amyloid_status_CSF,Lumipulse,Ab42/Ab40,2,0.893,Trelle 2026,
+Trelle2026_SAMS,SAMS,193,CU,amyloid_status_CSF,NULISAseq,pTau217/Ab42,2,0.94,Trelle 2026,
+Trelle2026_SAMS,SAMS,193,CU,amyloid_status_CSF,NULISAseq,full CNS panel (124 targets),124,0.94,Trelle 2026: only ~5/124 FDR-significant; best model is the 2-analyte ratio,panel-level AUC not separately reported; upper-bounded by the best in-panel model
+Trelle2026_AMASS,AMASS,122,CU,amyloid_status_PET,mixed,"covariates(age,sex,APOE4)",0,0.773,Trelle 2026,
+Trelle2026_AMASS,AMASS,122,CU,amyloid_status_PET,Lumipulse,NfL,1,0.582,"Trelle 2026 (significantly WORSE than covariates, Z=2.04 p=0.041)",
+Trelle2026_AMASS,AMASS,122,CU,amyloid_status_PET,Lumipulse,GFAP,1,0.646,Trelle 2026 (does not beat covariates),
+Trelle2026_AMASS,AMASS,122,CU,amyloid_status_PET,NULISAseq,pTau217,1,0.861,Trelle 2026,
+Trelle2026_AMASS,AMASS,122,CU,amyloid_status_PET,NULISAseq,BD-pTau217,1,0.92,Trelle 2026,
+Trelle2026_AMASS,AMASS,122,CU,amyloid_status_PET,Lumipulse,Ab42/Ab40,2,0.735,Trelle 2026,
+Trelle2026_AMASS,AMASS,122,CU,amyloid_status_PET,NULISAseq,pTau217/Ab42,2,0.865,Trelle 2026,
+Trelle2026_AMASS,AMASS,122,CU,amyloid_status_PET,NULISAseq,full CNS panel (131 targets),131,0.92,Trelle 2026: best single panel analyte BD-pTau217; panel adds nothing beyond it,upper-bounded by best in-panel model
+BioHermes2026,Bio-Hermes,988,mixed(CU+MCI+AD),amyloid_status_PET,discovery proteomics,295-protein RF/GB,295,0.8,IJMS 2026 27:5533 (reported range 0.79-0.81),
+BioHermes2026,Bio-Hermes,988,mixed(CU+MCI+AD),amyloid_status_PET,targeted immunoassay,plasma p-tau217 (external benchmark),1,0.9,"external ADNI/BioFINDER benchmark, NOT measured in Bio-Hermes",CROSS-STUDY comparison - not a within-study ratio
+ADNI_S7,ADNI,1317,mixed(CN+MCI+DEM),amyloid_status,targeted,p-tau217,1,0.904,datasets/literature_reference/.../S7_ADNI_validation_cohort.xlsx,
+ADNI_S7,ADNI,1317,mixed(CN+MCI+DEM),amyloid_status,targeted,Ab42/Ab40,2,0.831,same table,
+ADNI_S4_LO,ADNI late-onset,677,mixed,amyloid_status,targeted,p-tau217,1,0.902,S4_greyzone_delong_thresholds.xlsx (grey zone excluded),
+ADNI_S4_LO,ADNI late-onset,674,mixed,amyloid_status,targeted,Ab42/Ab40,2,0.811,S4_greyzone_delong_thresholds.xlsx,
+Ptau231GFAP2025,dementia-free cohort,155,CU/dementia-free,amyloid_status,Simoa,p-tau231,1,0.87,literature_review.md S2.5,
+Ptau231GFAP2025,dementia-free cohort,155,CU/dementia-free,amyloid_status,Simoa,GFAP,1,0.87,literature_review.md S2.5,
+Ptau231GFAP2025,dementia-free cohort,155,CU/dementia-free,amyloid_status,Simoa,p-tau231 + GFAP,2,0.89,best model; adding Ab42/40 and NfL did NOT improve fit,
+DownSyndrome2026,Down syndrome,290,DS (special),amyloid_status,targeted,6 analytes + age/sex SVM,6,0.96,literature_review.md S2.5,genetically enriched population; not generalisable to sporadic CU screening
+KnightADRC2025,Knight ADRC,3232,mixed,amyloid_status_PET,NULISAseq 120-plex,120-plex (8/120 associated with amyloid PET),120,,Cruchaga 2025; AUC not reported for the amyloid-PET endpoint,"counts only - included for the informative-fraction estimate, not the AUC model"

@@ -1,0 +1,74 @@
+{
+  "env": {
+    "python": "3.12.8",
+    "platform": "Linux-5.15.0-187-generic-x86_64-with-glibc2.35",
+    "numpy": "2.5.2",
+    "pandas": "3.0.5",
+    "scipy": "1.18.1",
+    "scikit_learn": "1.9.0",
+    "matplotlib": "3.11.1",
+    "seed": 42
+  },
+  "config": {
+    "K_GRID": [
+      1,
+      2,
+      3,
+      5,
+      10,
+      20,
+      50,
+      100,
+      300,
+      1305
+    ],
+    "N_REPEATS": 20,
+    "N_FOLDS": 5,
+    "N_PERM": 200,
+    "N_BOOT": 2000,
+    "APRIORI_AD": [
+      "GFAP",
+      "MAPT",
+      "APP",
+      "APOE",
+      "CLU",
+      "CST3",
+      "CHI3L1",
+      "SMOC1"
+    ],
+    "BIOHERMES8": [
+      "SERPINA1",
+      "C3",
+      "CRP",
+      "APOE",
+      "CFH",
+      "VTN",
+      "PON1"
+    ],
+    "CORE_AVAILABLE": [
+      "GFAP",
+      "MAPT",
+      "APP"
+    ]
+  },
+  "runs": [
+    {
+      "stratum": "apoe33",
+      "n": 36,
+      "n_pos": 18,
+      "auc_cov": 0.37962962962962965,
+      "ref_key": "topk_l2_1305",
+      "best_key": "topk_l2_20",
+      "runtime_s": 844.557816028595
+    },
+    {
+      "stratum": "full",
+      "n": 53,
+      "n_pos": 35,
+      "auc_cov": 0.6587301587301587,
+      "ref_key": "topk_l2_1305",
+      "best_key": "topk_l2_1305",
+      "runtime_s": 1012.0176529884338
+    }
+  ]
+}

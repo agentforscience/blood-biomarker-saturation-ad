@@ -1,0 +1,4 @@
+study,cohort,n,population,endpoint,small_panel,k_small,auc_small,large_panel,k_large,auc_large,auc_covariates,ratio_raw,ratio_excess,ratio_anchored,beats_90_raw,beats_90_excess,beats_90_anchored
+BioHermes2026,Bio-Hermes,988,mixed(CU+MCI+AD),amyloid_status_PET,plasma p-tau217 (external benchmark),1,0.9,295-protein RF/GB,295,0.8,0.5,1.125,1.3333333333333333,1.3333333333333333,True,True,True
+Trelle2026_AMASS,AMASS,122,CU,amyloid_status_PET,BD-pTau217,1,0.92,full CNS panel (131 targets),131,0.92,0.773,1.0,1.0,1.0,True,True,True
+Trelle2026_SAMS,SAMS,193,CU,amyloid_status_CSF,pTau217/Ab42,2,0.94,full CNS panel (124 targets),124,0.94,0.748,1.0,1.0,1.0,True,True,True
