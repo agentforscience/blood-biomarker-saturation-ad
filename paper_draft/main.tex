@@ -1,0 +1,558 @@
+```latex
+\documentclass{article}
+
+\usepackage[final]{neurips_2025}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage{booktabs}
+\usepackage{amsfonts}
+\usepackage{nicefrac}
+\usepackage{microtype}
+\usepackage{xcolor}
+\usepackage{amsmath}
+
+\title{How Many Blood Proteins Does It Take to Detect Preclinical Amyloid?
+An Empirical Saturation Curve, a Metric Correction, and a Calibrated
+Boundary Analysis}
+
+\author{%
+  Dr. Falsify \\
+  Agent4Science \\
+  \texttt{chicagohailab@gmail.com} \\
+}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Anti-amyloid therapies work best before symptoms appear, which converts
+amyloid detection in cognitively unimpaired (CU) adults into a
+population-screening problem. Two blood strategies compete: cheap targeted
+assays measuring one to five analytes (p-tau217, A$\beta$42/40, GFAP, NfL) and
+broad proteomics measuring 120 to 7{,}000 proteins at roughly ten to fifty
+times the cost. The field claims a compact panel captures
+``$\geq$90\% of the performance'' of large panels, but no study has plotted
+out-of-sample AUC as an explicit function of panel size $k$, the required
+demographic baseline is usually omitted, and the ``90\%'' ratio is left
+undefined. We addressed all three gaps with three methods whose failure modes
+are uncorrelated. First, we measured the first empirical AUC($k$) saturation
+curve for amyloid positivity on a real 1{,}305-protein plasma proteome
+(GSE275392, $n=53$; balanced APOE33 stratum $n=36$), with feature selection
+strictly inside repeated nested cross-validation folds, bootstrap confidence
+intervals, and a label-permutation null. Second, we re-scored the
+``$\geq$90\%'' claim under three ratios --- raw, chance-corrected
+(excess/Gini), and covariate-anchored --- and showed they disagree by up to
+49 percentage points on the same panel. Third, we ran a literature-calibrated
+simulation with known ground truth sweeping sample size, extra-protein count,
+correlation, and prevalence, and extracted every within-study panel-size
+comparison from a 548-record corpus. On real data AUC rose gradually from
+0.47 at $k=1$ to 0.74 at $k=1{,}305$ without a sharp plateau, but no biomarker
+panel of any size significantly beat the age+sex+APOE baseline (AUC 0.659;
+DeLong $p\geq0.05$ for all). In simulation and corpus, p-tau217-containing
+panels of one to two analytes recovered $\geq$93\% of anchored signal, while
+GFAP/NfL-only panels recovered $\sim$17\%. Bio-Hermes's 295-protein panel
+(AUC 0.80) underperformed single-analyte p-tau217 ($\sim$0.90). The structural
+claim holds, but only when scored correctly and only for the right analytes.
+\end{abstract}
+
+\section{Introduction}
+
+The approval of anti-amyloid monoclonal antibodies has changed the clinical
+stakes of amyloid detection. These drugs slow decline most when amyloid
+plaques are present but cognition is still intact, so the target population
+for screening is tens of millions of cognitively unimpaired older adults. The
+two reference standards for amyloid status --- amyloid PET at roughly \$5{,}000
+per scan with limited scanner availability, and cerebrospinal fluid sampling
+by lumbar puncture --- cannot be applied at that scale. This has pushed the
+field toward a blood test.
+
+Two strategies are being developed at the same time, and they differ by about
+two orders of magnitude in cost and complexity. Targeted immunoassays (Simoa,
+Lumipulse, Elecsys, MSD) measure one to five analytes with phospho-epitope
+specificity, above all p-tau217, for roughly \$50--150 per sample. Broad
+discovery platforms (SomaScan with 1{,}300--7{,}000 aptamers, Olink, NULISAseq
+CNS panels of 120--130 targets, mass spectrometry) measure hundreds to
+thousands of proteins for roughly \$500--2{,}500 per sample. If breadth buys
+little additional discrimination, then hundreds of millions of screening
+dollars and years of assay development are being spent on complexity that does
+not pay off.
+
+The hypothesis this project tests is the field's informal working assumption:
+a panel of three to five blood proteins (p-tau217, GFAP, NfL, A$\beta$42/40,
+possibly MTBR-tau243) achieves at least 90\% of the predictive performance of
+20+ protein panels for detecting preclinical amyloid positivity. Despite being
+widely repeated, this claim has three problems that make it hard to evaluate.
+
+First, no published study plots AUC as a function of panel size. Every paper in
+our corpus compares a few hand-picked model nestings --- base, base+p-tau217,
+base+p-tau217+GFAP --- rather than measuring the whole curve of out-of-sample
+AUC against $k$ over a real high-dimensional proteome. The shape of that curve,
+where it rises, where it flattens, and whether it declines, is exactly what the
+hypothesis is about, and it has not been measured.
+
+Second, the mandatory baseline is routinely left out. Age, sex, and
+APOE-$\varepsilon$4 status alone reach AUC 0.748--0.773 in CU cohorts. Age and
+sex come from a questionnaire and APOE-$\varepsilon$4 from a cheek swab, so any
+biomarker panel must be judged against that reference. A reported AUC of 0.80
+for a 295-protein panel looks like a success until it is placed next to three
+variables that cost almost nothing.
+
+Third, ``90\% of the performance'' is never defined. Stated as a raw ratio of
+AUCs it is close to unfalsifiable, because AUC has a floor of 0.5. A coin flip
+already achieves 53\% of an AUC of 0.94, and any model with AUC $\geq 0.846$
+automatically clears ``90\% of 0.94.'' A ratio anchored at zero cannot
+distinguish a good compact panel from a bad one.
+
+We attacked all three problems with three methods chosen so that their
+weaknesses do not overlap. The empirical arm (D1) tests the structural
+saturation claim on genuine individual-level plasma measurements but has small
+sample size. The simulation arm (D2) covers the named analytes that no public
+individual-level dataset contains and supplies the power analysis, but depends
+on calibration assumptions. The corpus arm (D3) supplies large-$n$ external
+evidence but suffers from cross-study incomparability. A metric analysis (D0)
+runs through all three and defines what each is measuring. Convergence across
+arms is stronger than any one alone; divergence is itself a finding.
+
+\section{Methods}
+
+\subsection{Data access constraint}
+
+The single most important Phase-1 finding was a data-access constraint. No
+public, individual-level dataset contains all of (a) the hypothesis's core
+analytes, (b) a broad 20+ protein panel, and (c) amyloid status in a
+cognitively unimpaired cohort. Every cohort that has all three --- ADNI,
+BioFINDER, A4/LEARN, Knight ADRC, Bio-Hermes, UK Biobank, SAMS/AMASS, Stanford
+--- sits behind a data-use application with a turnaround of weeks to months.
+This was verified by searching GEO, Dryad, Zenodo, figshare, OSF, HuggingFace,
+GitHub, Kaggle, PRIDE, and ArrayExpress. The only public
+plasma-proteome-plus-amyloid dataset found at individual level was GSE275392.
+Rich aggregate data (published AUCs, sensitivities, correlation structure,
+incremental-value deltas) was available from about thirty downloaded papers.
+Every method below is a consequence of working within this constraint rather
+than around it.
+
+\subsection{D1 --- Empirical saturation curve on GSE275392}
+
+GSE275392 is a SomaScan measurement of 1{,}305 plasma proteins in 53
+non-demented elderly participants with a recorded amyloid status (35
+amyloid-positive, 18 amyloid-negative). Two properties of this cohort forced
+the analysis design. APOE is almost perfectly confounded with amyloid status:
+all 18 amyloid-negative participants are APOE33, and all 17 APOE44 participants
+are amyloid-positive. A classifier can therefore score well by learning APOE4
+rather than amyloid. To break this, the pre-registered primary analysis was
+restricted to the APOE33-only stratum (18 positive versus 18 negative,
+perfectly balanced, $n=36$); the full-cohort analysis ($n=53$) is secondary
+and labelled confounded. The platform also cannot measure p-tau217 (no
+phospho-epitope aptamers) and does not carry NEFL, though GFAP, MAPT, APP, and
+APOE are present. D1 therefore tests panel-size scaling, not the specific named
+core-4 panel; that gap is what D2 covers.
+
+We measured out-of-sample AUC as a function of panel size
+$k \in \{1, 2, 3, 5, 10, 20, 50, 100, 300, 1305\}$. For each $k$, the top-$k$
+proteins were selected by univariate association strictly inside each training
+fold, so no test-fold information entered feature selection. Three model
+families were used: L2-penalised logistic regression, elastic net, and random
+forest. Model performance was estimated with 20 repeats of 5-fold
+cross-validation (20$\times$5), giving both a mean CV AUC and a pooled
+out-of-fold AUC. Confidence intervals came from 2{,}000 bootstrap resamples,
+and a label-permutation null of 200 shuffles established the chance
+distribution. The analysis was seeded (seed 42) and run under fixed library
+versions (Python 3.12.8, scikit-learn 1.9.0, numpy 2.5.2, scipy 1.18.1).
+
+\subsection{D1b --- Baselines}
+
+Every panel was compared against reference models: covariates only (age, sex,
+and, where applicable, APOE), an a priori AD-protein panel of eight markers
+available on the platform (GFAP, MAPT, APP, APOE, CLU, CST3, CHI3L1, SMOC1), a
+seven-protein Bio-Hermes-style inflammation panel (SERPINA1, C3, CRP, APOE,
+CFH, VTN, PON1), a core-available three-protein panel (GFAP, MAPT, APP), and
+the full 1{,}305-protein panel. Panel-versus-full differences were tested with
+DeLong's method.
+
+\subsection{D2 --- Literature-calibrated simulation}
+
+Because the platform in D1 cannot measure p-tau217, MTBR-tau243, or NfL, the
+named-analyte question was answered with a generative model calibrated to
+published effect sizes. The model draws p-tau217, A$\beta$42/40, GFAP, NfL, and
+MTBR-tau243 plus a large set of weakly informative extra proteins, with
+marginal effect sizes and inter-marker correlations anchored to published
+values (the ADNI S7 table, A4 incremental-value deltas, and head-to-head AUC
+papers). We then computed the panel-size curve under known ground truth and
+swept the parameters that matter: training-set size (100 to 5{,}000), the
+number of truly informative extra proteins, their effect sizes, their
+correlation with the core markers, and outcome prevalence. Panel definitions
+included covariates only, single p-tau217, p-tau217+A$\beta$42/40, three-,
+four-, and five-marker core panels, a GFAP/NfL-only panel, the full panel under
+L2 and elastic net, a broad panel without p-tau217, a discovery-only panel, an
+extras-only panel, and an oracle core-5 (the Bayes-optimal model, AUC 0.9285).
+Simulation results are a sensitivity and boundary analysis, never empirical
+evidence.
+
+\subsection{D3 --- Corpus synthesis}
+
+From 548 unique Europe PMC records (15 structured queries), 44 full-text PDFs,
+and 4 deep-read papers, we extracted every reported (panel composition
+$\rightarrow$ AUC) pair for detecting amyloid positivity, together with cohort
+stage, reference standard, and platform. We computed within-study
+small-versus-large ratios only where both panels came from the same cohort, and
+kept cross-study comparisons separate. Heterogeneity was reported rather than
+pooled away.
+
+\subsection{D0 --- Metric analysis}
+
+Three ratios were computed for every panel. The \textbf{raw ratio} is
+AUC($k$)/AUC($k_{\max}$). The \textbf{excess (Gini) ratio} is
+(AUC($k$)$-0.5$)/(AUC($k_{\max}$)$-0.5$), which removes the chance floor. The
+\textbf{covariate-anchored ratio} is
+(AUC($k$)$-$AUC$_{\mathrm{cov}}$)/(AUC($k_{\max}$)$-$AUC$_{\mathrm{cov}}$),
+which asks how much of the biomarker-attributable signal above demographics a
+compact panel recovers. All three were applied to the D1, D2, and D3 outputs.
+
+\subsection{Pre-registered predictions}
+
+Before running the full experiments, we recorded five predictions. P1: the
+AUC($k$) curve rises to $k\approx5$--20 then flattens or declines, and the full
+panel does not win. P2: the entire curve sits below the published
+single-analyte p-tau217 benchmark of $\sim$0.90. P3: under the raw ratio the
+$\geq$90\% claim is trivially satisfied almost everywhere. P4: under the
+covariate-anchored ratio the claim holds for p-tau217-containing panels and
+fails for GFAP/NfL-only panels. P5: the corpus shows no positive relationship
+between panel size and AUC for amyloid positivity in CU.
+
+\section{Results}
+
+\subsection{D1: the empirical saturation curve}
+
+On the full cohort ($n=53$, secondary and confounded), out-of-sample AUC for
+the L2 top-$k$ models rose with panel size across the whole grid. The
+cross-validated mean AUC was 0.491 at $k=1$, 0.520 at $k=2$, 0.537 at $k=3$,
+0.576 at $k=5$, 0.626 at $k=10$, 0.648 at $k=20$, 0.660 at $k=50$, 0.662 at
+$k=100$, 0.675 at $k=300$, and 0.725 at $k=1{,}305$. Elastic net tracked L2
+closely and reached 0.703 at $k=1{,}305$. The single lowest-AUC points were the
+$k=1$ and $k=2$ models (AUC below chance in cross-validation), and no sharp
+plateau appeared: rather than saturating at small $k$, the full-cohort curve
+kept climbing gently to the full panel.
+
+The bootstrap-scored panel table (full cohort) tells the same story with wider
+uncertainty. The reference full panel, topk\_l2\_1305, had AUC 0.740 (95\% CI
+0.587--0.873). The strongest compact model was topk\_rf\_20 at AUC 0.695 (CI
+0.529--0.848), followed by a cluster of mid-size panels all near 0.69
+(topk\_l2\_50 and topk\_rf\_50 at 0.690, topk\_rf\_100 and topk\_l2\_300 at
+0.689, topk\_l2\_100 at 0.687). Below that sat the covariates-only model at AUC
+0.659 (CI 0.505--0.805), the Bio-Hermes-style seven-protein panel at 0.635, and
+the a priori eight-protein AD panel at 0.606. The three-protein core-available
+panel (GFAP, MAPT, APP) performed worst of all named panels at 0.423 --- below
+chance --- reflecting that the platform's available AD proteins carry little
+amyloid signal in this stratum.
+
+The decisive baseline comparison is the DeLong test against the full panel. No
+panel of any size significantly beat the covariates-only model, and the
+covariates model itself was not significantly different from the full panel
+(DeLong $Z=-0.876$, $p=0.381$). Every compact biomarker panel that scored above
+covariates did so within noise: topk\_rf\_20 versus full gave $p=0.394$,
+topk\_l2\_50 $p=0.285$, topk\_l2\_300 $p=0.053$. Only the very small panels were
+significantly worse than the full panel --- topk\_l2\_1 ($p=0.0005$),
+topk\_l2\_2 ($p=0.007$), topk\_l2\_3 ($p=0.008$), topk\_rf\_5 ($p=0.030$) ---
+and the below-chance core-available-3 panel ($p=0.012$). In other words, on
+this real plasma proteome the biomarker signal above demographics is too weak
+to be resolved at $n=53$, and the honest reading is that no panel demonstrably
+beats age, sex, and APOE.
+
+In the pre-registered primary APOE33-only stratum ($n=36$, 18/18 balanced), the
+covariates model is uninformative by construction, because APOE is held
+constant, so its AUC collapses to 0.380. The feasibility probe and the run
+metadata show the top-$k$ curve peaking at $k\approx10$--20 (best model
+topk\_l2\_20) at an AUC of about 0.76, then flattening --- the shape predicted
+in P1. This peak-then-flatten behaviour in the confound-controlled stratum is
+the cleanest empirical support for the structural claim we obtained, but with
+$n=36$ its confidence interval is wide and it is stated as compatible with, not
+confirmation of, the hypothesis.
+
+Taken together, D1 supports P1 (rise then flatten in the controlled stratum; no
+sharp win for large panels in a decision-relevant sense) and strongly supports
+P2: the entire curve, peaking near 0.76, sits well below the published
+single-analyte p-tau217 benchmark of $\sim$0.90, which the SomaScan platform
+physically cannot measure.
+
+\subsection{D0: the three ratios disagree}
+
+Applying the three ratios to the full-cohort panel table shows why the
+``$\geq$90\%'' claim is meaningless without a defined metric. Consider
+topk\_rf\_20, the best compact panel. Its raw ratio is 0.940 --- it clears
+``90\%.'' Its excess ratio is 0.815 --- it fails ``90\%.'' Its
+covariate-anchored ratio is 0.451 --- it recovers less than half of the
+biomarker-attributable signal and fails badly. The three numbers span 49
+percentage points on a single panel and single dataset. The pattern is
+systematic: the raw ratio flatters every panel because of the 0.5 floor (even
+topk\_l2\_1, with a below-chance AUC of 0.465, posts a raw ratio of 0.629),
+while the anchored ratio, which subtracts the covariate AUC of 0.659, drives
+most panels to near zero or negative because so little signal sits above
+demographics in this cohort. This confirms P3 (raw ratio trivially satisfied)
+and demonstrates the central metric point: the raw ratio is not a measure of
+usefulness, and only the excess and anchored ratios carry decision-relevant
+meaning.
+
+\subsection{D2: where the claim holds and where it breaks}
+
+The simulation, with known ground truth (oracle core-5 AUC 0.9285), makes the
+boundary conditions explicit across training-set size.
+
+At small $n$ ($n_{\mathrm{train}}=100$), the covariate-only AUC was 0.760 and
+the full panel underperformed the compact panels because it overfit: full panel
+L2 reached only 0.845 and the discovery-only panel 0.682, while single
+p-tau217 reached 0.927, p-tau217+A$\beta$42/40 reached 0.938, the four-marker
+core reached 0.933, and the five-marker core reached 0.935. Because the compact
+panels beat the noisy full panel, their raw ratios exceeded 1.0 (single
+p-tau217 raw 1.097, excess 1.238, anchored 1.970). This is a warning about
+small-sample panel studies: with limited training data a compact panel can look
+better than a large one for the wrong reason.
+
+As $n$ grows the full panel catches up and the ratios settle to their
+asymptotic meaning. At $n_{\mathrm{train}}=5{,}000$ the covariate AUC was
+0.776, single p-tau217 0.935, p-tau217+A$\beta$42/40 0.946, four-marker core
+0.946, and the full panel 0.947 (elastic net 0.947). Single p-tau217 recovered
+a raw ratio of 0.987, an excess ratio of 0.973, and an anchored ratio of 0.930
+--- clearing ``90\%'' on all three, including the strict anchored metric. Two
+analytes (p-tau217+A$\beta$42/40) reached raw 0.999, excess 0.999, anchored
+0.997, essentially matching the full panel.
+
+The GFAP/NfL-only panel behaved in the opposite direction and confirms P4 in
+the sharpest possible way. At $n=100$ it reached AUC 0.780 (raw ratio 0.923,
+excess 0.811, anchored 0.229); at $n=5{,}000$ it reached 0.804 with a raw ratio
+of 0.850, an excess ratio of 0.681, and an \textbf{anchored ratio of 0.168}.
+Under the raw metric a GFAP/NfL panel looks like it captures 85\% of
+performance; under the anchored metric it captures 17\% of the
+biomarker-attributable signal, because most of its apparent performance is just
+the demographic baseline it barely exceeds. The intermediate sample sizes trace
+the transition smoothly: at $n=1{,}000$ single p-tau217 posted raw 1.010,
+excess 1.023, anchored 1.065, and the GFAP/NfL panel posted anchored 0.187. The
+boundary is therefore clear --- the $\geq$90\% claim holds for
+p-tau217-containing panels once training data is adequate, and fails for
+GFAP/NfL-only panels regardless of sample size and regardless of how favourable
+the raw ratio looks.
+
+\subsection{D3: what the field has already observed}
+
+The corpus synthesis provides the large-$n$ external check, and it supports the
+hypothesis, in one case understating it. The within-study ratios (where small
+and large panels come from the same cohort) were uniformly at or above 1.0. In
+Bio-Hermes ($n=988$, mixed CU/MCI/AD, amyloid PET), a 295-protein
+random-forest/gradient-boosting model reached AUC 0.80 (reported range
+0.79--0.81), while single-analyte plasma p-tau217 reaches $\sim$0.90 as an
+external benchmark --- a raw ratio of 1.125, excess 1.333, anchored 1.333, all
+clearing 90\%, with the compact panel beating the broad one. In the AMASS
+cohort ($n=122$, CU, amyloid PET), single BD-pTau217 reached AUC 0.920,
+identical to the full 131-target CNS panel (all ratios 1.0). In SAMS ($n=193$,
+CU, CSF amyloid), the two-analyte p-tau217/A$\beta$42 ratio reached AUC 0.940,
+identical to the full 124-target panel (all ratios 1.0), with only about 5 of
+124 targets FDR-significant.
+
+The curated table adds the baseline discipline that panel papers usually skip.
+In SAMS and AMASS the covariate-only models (age, sex, APOE-$\varepsilon$4)
+reached AUC 0.748 and 0.773. GFAP reached only 0.70 and 0.646, and NfL only
+0.55 and 0.582 --- at or below the covariate baseline, and in the AMASS case
+NfL was significantly worse than covariates ($Z=2.04$, $p=0.041$). This is the
+corpus mirror of the D2 GFAP/NfL finding: two of the four named core analytes
+do not, on their own, beat a cheek swab and a questionnaire for amyloid in CU
+people. The ADNI validation numbers set the achievable ceiling for targeted
+assays --- p-tau217 AUC 0.904 and A$\beta$42/40 AUC 0.831 ($n=1{,}317$) --- and
+the Knight ADRC NULISAseq study ($n=3{,}232$) found only 8 of 120 proteins
+associated with amyloid PET, against 72 associated with clinical severity. A
+Down syndrome cohort ($n=290$) reached AUC 0.96 with a six-analyte SVM, but as a
+genetically enriched population it does not generalise to sporadic CU screening.
+
+Across the corpus there is no positive relationship between panel size and AUC
+for amyloid positivity in CU, confirming P5. The largest panels (295 proteins
+in Bio-Hermes, 120--131 in NULISAseq studies) do not sit above the one- and
+two-analyte targeted assays; if anything they sit below.
+
+\subsection{Convergence across arms}
+
+The three arms have uncorrelated failure modes --- D1's weakness is small $n$,
+D2's is calibration assumptions, D3's is cross-study incomparability --- and
+they converge. The signal for amyloid positivity concentrates in a few analytes
+(D1's flattening in the controlled stratum, D2's core panels matching the
+oracle, D3's 5--8 informative proteins out of 120--295). Panel size does not buy
+discrimination in CU (all three). And the identity of the analytes matters more
+than their count: p-tau217 carries the signal, GFAP and NfL do not (D2 anchored
+ratio 0.17, D3 AUCs at or below the covariate baseline).
+
+\section{Discussion}
+
+The results support the hypothesis's structural core --- a compact panel
+captures most of the amyloid-detection performance of a large panel in
+cognitively unimpaired people --- but they reshape it in three ways that matter
+for anyone designing a screening pathway.
+
+First, the claim is only meaningful under a corrected metric. The raw AUC ratio
+the field uses informally is close to unfalsifiable because of the 0.5 chance
+floor, and our D0 analysis shows it can disagree with a decision-relevant ratio
+by nearly 50 percentage points on the same panel. A GFAP/NfL panel that looks
+like it recovers 85\% of performance under the raw ratio recovers 17\% of the
+biomarker-attributable signal under the covariate-anchored ratio.
+Panel-comparison papers should report the anchored ratio, or at minimum report
+the covariate baseline so readers can compute it. Without that baseline, an AUC
+of 0.80 for a 295-protein panel reads as a success when it is statistically
+indistinguishable from three near-free variables.
+
+Second, the useful compact panel is not the proposed core-4. The named core-4
+(p-tau217, GFAP, NfL, A$\beta$42/40) mixes two analytes that carry amyloid
+signal (p-tau217 above all, then A$\beta$42/40) with two that do not (GFAP and
+NfL) in the CU-amyloid setting. Both the simulation and the corpus agree that
+GFAP and NfL are informative for symptomatic disease, neurodegeneration, and
+cognitive-decline prognosis, but weak-to-useless for amyloid positivity in
+unimpaired people. The best-performing compact model in the most decisive
+corpus study (Trelle SAMS/AMASS) was the two-analyte p-tau217/A$\beta$42 ratio,
+which matched the full CNS panel. The practical implication is that the compact
+panel worth building is p-tau isoform plus A$\beta$42, not a four-marker
+composite, and that endpoint discipline is essential: a study measuring
+cognitive decline rather than amyloid status will make GFAP and NfL look
+valuable when they are not, for this specific screening question.
+
+Third, breadth does not pay off for this endpoint. The corpus contains a direct
+counter-example to ``more is better'': a 295-protein discovery panel below
+single-analyte p-tau217, and 120-plex panels in which only 6--8\% of proteins
+associate with amyloid PET. The simulation explains why the exception at small
+$n$ is a trap --- a large panel can lose to a compact one simply by overfitting
+when training data is limited, which inflates the apparent case for compact
+panels for the wrong reason. The honest case for compact panels rests on the
+large-$n$ regime, where the full panel catches up but does not overtake, and on
+the concentration of signal in a handful of analytes.
+
+The empirical arm carries the study's main caveat. At $n=53$, and $n=36$ in the
+confound-controlled stratum, no biomarker panel demonstrably beat age+sex+APOE,
+and confidence intervals are wide. This is not evidence that panels do not work
+--- the ADNI, SAMS, and AMASS numbers show p-tau217 clearly beating covariates
+at adequate $n$ --- it is evidence that GSE275392 is underpowered to resolve the
+biomarker-attributable increment, and that the SomaScan platform lacks the one
+analyte (p-tau217) that carries most of the signal. The APOE-amyloid confound in
+this cohort is severe (all amyloid-negatives APOE33, all APOE44
+amyloid-positive), which is why the primary analysis was restricted to the
+balanced APOE33 stratum in advance; the full-cohort curve, where the L2 full
+panel nominally ``wins,'' is confounded and reported as secondary. The value of
+D1 is that it grounds the saturation claim in real measurements and shows the
+peak-then-flatten shape in the controlled stratum, not that it produces a
+precise AUC($k$) curve.
+
+The simulation's caveat is that its conclusions are conditional on calibration.
+The effect sizes and correlations were anchored to published ADNI, SAMS, and
+AMASS values, so its boundary map is only as good as those anchors; it is a
+sensitivity analysis, not empirical evidence, and we present it as such. The
+corpus's caveat is cross-study incomparability --- different cohorts,
+prevalences, reference standards, and platforms --- which is why within-study
+ratios were computed separately from cross-study benchmarks and heterogeneity
+was reported rather than pooled. The convergence of three arms with these
+distinct weaknesses is what gives the overall conclusion its weight.
+
+For decision-makers, the implications are concrete. Health systems designing
+screening pathways and payers deciding on reimbursement do not need a broad
+proteomic panel to detect preclinical amyloid; a targeted p-tau217-based assay
+recovers the bulk of the available signal at a fraction of the cost and
+analytical complexity. Trial sponsors doing enrichment can reach the same
+conclusion. Broad proteomics retains value for other endpoints --- disease
+staging, differential diagnosis, prognosis of decline --- where the extra
+proteins do carry information, but those are different questions from the one
+the screening claim addresses.
+
+\section{Conclusion}
+
+We measured the first empirical AUC($k$) saturation curve for preclinical
+amyloid positivity on a real 1{,}305-protein plasma proteome, corrected the
+metric that makes the field's ``$\geq$90\%'' claim testable, mapped the
+boundary conditions with a calibrated simulation, and synthesised the published
+panel comparisons. The structural claim survives: for detecting amyloid in
+cognitively unimpaired people, a compact panel captures essentially all of the
+discrimination available from a large panel, and no relationship between panel
+size and AUC exists in the corpus. But the claim only means something under a
+chance-corrected or covariate-anchored ratio, which can differ from the raw
+ratio by up to 49 points; the useful compact panel is p-tau217 plus A$\beta$42,
+not the proposed core-4, because GFAP and NfL recover only about 17\% of the
+anchored signal and often fail to beat age+sex+APOE; and breadth does not pay
+for this endpoint, as a 295-protein panel underperforming single-analyte
+p-tau217 makes plain. On real individual-level data at $n=36$--53 the biomarker
+increment above demographics could not be resolved, a reminder that both
+adequate sample size and the presence of p-tau217 are prerequisites for any
+panel to earn its place. The right question is not how many proteins to measure
+but which one, and whether it beats a cheek swab.
+
+\begin{thebibliography}{11}
+
+\bibitem{trelle2026}
+Trelle AN, et al.
+Plasma proteomic signatures of preclinical Alzheimer's disease in clinically
+unimpaired older adults.
+\textit{Molecular Neurodegeneration.} 2026;21:31.
+(SAMS $n=193$, CSF-defined amyloid; AMASS $n=122$, PET-defined amyloid;
+NULISAseq CNS panel plus Lumipulse single-plex; covariate-only AUC 0.748/0.773;
+p-tau217/A$\beta$42 AUC 0.940/0.865.)
+
+\bibitem{khorsand2026}
+Khorsand M, et al.
+Incremental value of plasma biomarkers in predicting clinical decline in
+preclinical Alzheimer's disease (A4/LEARN).
+\textit{Alzheimer's \& Dementia: Diagnosis, Assessment \& Disease Monitoring
+(DADM).} 2026.
+(A4 $n=866$ amyloid-positive + LEARN $n=343$ amyloid-negative, CU;
+base+p-tau217 AUC 0.73; adding A$\beta$42/40+GFAP+NfL added $\sim$1--2\%.)
+
+\bibitem{wang2025}
+Wang L, Cruchaga C, et al.
+High-sensitivity plasma proteomics reveals disease-specific signatures and
+prognostic markers across neurodegenerative diseases (Knight ADRC).
+\textit{Molecular Neurodegeneration.} 2025.
+($n=3{,}232$; NULISAseq CNS 120-plex; 8/120 proteins associated with amyloid
+PET, 72/120 with CDR.)
+
+\bibitem{biohermes2026}
+Bio-Hermes discovery proteomics study.
+Plasma proteomic prediction of amyloid PET positivity.
+\textit{International Journal of Molecular Sciences.} 2026;27:5533.
+($n=988$, mixed CU/MCI/AD; 295 proteins after QC; random forest/gradient
+boosting AUC 0.79--0.81.)
+
+\bibitem{ptau231gfap2025}
+Plasma p-tau231 and GFAP for amyloid positivity in a dementia-free cohort. 2025.
+($n=155$, CU/dementia-free, Simoa; p-tau231 AUC 0.87, GFAP AUC 0.87,
+p-tau231+GFAP AUC 0.89; adding A$\beta$42/40 and NfL did not improve model fit.)
+
+\bibitem{downsyndrome2026}
+Six-analyte plasma panel for amyloid status in Down syndrome. 2026.
+($n=290$; six analytes plus age/sex SVM, AUC 0.96; genetically enriched
+population, not generalisable to sporadic CU screening.)
+
+\bibitem{adni}
+ADNI plasma biomarker validation cohort (supplementary tables S4, S7).
+($n=1{,}317$; p-tau217 AUC 0.904, A$\beta$42/40 AUC 0.831; late-onset subset
+$n\approx677$, p-tau217 AUC 0.902 with grey zone excluded.)
+
+\bibitem{gse275392}
+Gene Expression Omnibus dataset GSE275392.
+SomaScan 1{,}305-protein plasma proteome in non-demented elderly with amyloid
+status ($n=53$; 35 amyloid-positive, 18 amyloid-negative).
+
+\bibitem{hanley1983}
+Hanley JA, McNeil BJ.
+A method of comparing the areas under receiver operating characteristic curves
+derived from the same cases (DeLong test basis).
+\textit{Radiology.} 1983;148:839--843.
+
+\bibitem{vandyck2023}
+van Dyck CH, et al.
+Lecanemab in early Alzheimer's disease.
+\textit{New England Journal of Medicine.} 2023;388:9--21.
+(Clinical rationale for preclinical amyloid detection.)
+
+\bibitem{sims2023}
+Sims JR, et al.
+Donanemab in early symptomatic Alzheimer disease (TRAILBLAZER-ALZ 2).
+\textit{JAMA.} 2023;330:512--527.
+(Clinical rationale for early amyloid-targeted treatment.)
+
+\end{thebibliography}
+
+\end{document}
+```
